@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Superball Bingo Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf8f4; --surface: #fff; --text: #1a1a1a; --text-muted: #6b6560;
+    --accent: #1a1a1a; --accent-light: #e8e8e8; --border: #e0dbd5;
+    --shadow: rgba(26,26,26,0.06); --radius: 10px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+  .header { background:var(--accent); color:#fff; padding:1.8rem 2rem 2.3rem; text-align:center; position:relative; }
+  .header::after { content:''; position:absolute; bottom:-1px; left:0; right:0; height:18px; background:var(--bg); border-radius:18px 18px 0 0; }
+  .header h1 { font-family:'Fraunces',serif; font-weight:900; font-size:1.8rem; letter-spacing:-0.02em; margin-bottom:0.2rem; }
+  .header p { opacity:0.85; font-size:0.88rem; font-weight:300; }
+
+  .container { max-width:960px; margin:0 auto; padding:1.5rem; }
+
+  .tabs { display:flex; gap:4px; background:var(--border); border-radius:var(--radius); padding:4px; margin-bottom:1.5rem; }
+  .tab { flex:1; padding:0.6rem 0.8rem; border:none; background:transparent; font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:500; color:var(--text-muted); cursor:pointer; border-radius:7px; transition:all 0.2s; }
+  .tab.active { background:var(--surface); color:var(--text); box-shadow:0 1px 4px var(--shadow); }
+
+  .panel { display:none; }
+  .panel.active { display:block; }
+
+  .card { background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); padding:1.5rem; margin-bottom:1rem; box-shadow:0 2px 8px var(--shadow); }
+  .card h2 { font-family:'Fraunces',serif; font-size:1.1rem; font-weight:700; margin-bottom:0.15rem; }
+  .card .subtitle { font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem; }
+
+  .info-box { background:#f0f0f0; border-radius:8px; padding:0.7rem 1rem; font-size:0.8rem; color:#555; margin-bottom:1rem; border-left:4px solid #888; }
+
+  /* Mode selector */
+  .mode-selector { display:flex; gap:8px; margin-bottom:1rem; }
+  .mode-btn { flex:1; padding:0.8rem; border:2px solid var(--border); border-radius:var(--radius); background:var(--surface); cursor:pointer; text-align:center; transition:all 0.2s; }
+  .mode-btn.active { border-color:var(--accent); background:var(--accent); color:#fff; }
+  .mode-btn strong { display:block; font-size:0.9rem; margin-bottom:2px; }
+  .mode-btn span { font-size:0.75rem; opacity:0.7; }
+
+  .field-label { font-family:'Fraunces',serif; font-weight:700; font-size:0.9rem; margin:0.8rem 0 0.4rem; }
+  .statements-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  @media(max-width:640px){.statements-grid{grid-template-columns:1fr;}}
+  .stmt-row { display:flex; align-items:center; gap:6px; }
+  .stmt-num { width:24px; height:24px; background:var(--accent-light); color:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:700; flex-shrink:0; }
+  .stmt-row input { flex:1; padding:0.4rem 0.5rem; border:1px solid var(--border); border-radius:6px; font-family:'DM Sans',sans-serif; font-size:0.8rem; min-width:0; }
+  .stmt-row input:focus { outline:none; border-color:var(--accent); }
+
+  .joker-row { margin-top:0.6rem; padding-top:0.6rem; border-top:1px dashed var(--border); display:flex; align-items:center; gap:8px; }
+  .joker-badge { background:#555; color:#fff; padding:2px 10px; border-radius:20px; font-size:0.7rem; font-weight:700; white-space:nowrap; }
+  .joker-row input { flex:1; padding:0.4rem 0.5rem; border:1px solid var(--border); border-radius:6px; font-family:'DM Sans',sans-serif; font-size:0.8rem; }
+
+  .title-row { margin-bottom:0.8rem; display:flex; align-items:center; gap:8px; }
+  .title-row label { font-weight:700; font-size:0.85rem; white-space:nowrap; }
+  .title-row input { flex:1; padding:0.4rem 0.5rem; border:1px solid var(--border); border-radius:6px; font-family:'DM Sans',sans-serif; font-size:0.83rem; }
+
+  .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:1rem; }
+  .controls label { font-size:0.83rem; font-weight:500; }
+  .controls input[type=number] { width:60px; padding:0.35rem 0.4rem; border:1px solid var(--border); border-radius:6px; font-family:'DM Sans',sans-serif; font-size:0.85rem; text-align:center; }
+
+  .btn { padding:0.55rem 1.3rem; border:none; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:700; cursor:pointer; transition:all 0.2s; }
+  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-primary:hover { background:#000; transform:translateY(-1px); }
+  .btn-secondary { background:#555; color:#fff; }
+  .btn-secondary:hover { background:#333; transform:translateY(-1px); }
+  .btn-outline { background:transparent; color:var(--accent); border:2px solid var(--accent); }
+  .btn-outline:hover { background:var(--accent-light); }
+  .btn:disabled { opacity:0.4; cursor:not-allowed; transform:none!important; }
+
+  .preview-controls { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:1rem; }
+  .page-nav { display:flex; align-items:center; gap:8px; }
+  .page-nav button { width:32px; height:32px; border-radius:50%; border:1px solid var(--border); background:var(--surface); cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center; }
+  .page-nav span { font-size:0.85rem; font-weight:500; min-width:80px; text-align:center; }
+
+  .preview-sheet { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .preview-card { border:2px solid #000; background:#fff; overflow:hidden; }
+  .preview-card-label { text-align:center; font-size:0.6rem; color:#999; padding:2px 0; background:#f5f5f5; border-bottom:1px solid #ddd; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; }
+  .preview-grid { display:grid; }
+  .preview-cell { border:1px solid #ccc; display:flex; align-items:center; justify-content:center; text-align:center; padding:2px; font-size:0.5rem; line-height:1.2; font-weight:500; word-break:break-word; overflow:hidden; }
+  .preview-cell.joker { background:#eee; font-weight:700; font-size:0.55rem; }
+  .preview-title { font-family:'Fraunces',serif; font-weight:900; font-size:1.1rem; text-align:center; letter-spacing:0.08em; text-transform:uppercase; }
+  .preview-sub { font-size:0.55rem; color:#999; text-align:center; letter-spacing:0.1em; }
+  .preview-motto { font-size:0.5rem; color:#bbb; font-style:italic; text-align:center; margin-top:4px; }
+
+  .columns-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .columns-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+  @media(max-width:700px){ .columns-2,.columns-3{grid-template-columns:1fr;} }
+
+  .master-table { width:100%; border-collapse:collapse; font-size:0.8rem; }
+  .master-table th { background:#1a1a1a; color:#fff; padding:0.4rem 0.6rem; text-align:left; font-weight:700; }
+  .master-table td { padding:0.4rem 0.6rem; border-bottom:1px solid var(--border); }
+  .master-table tr:nth-child(even) td { background:#faf8f4; }
+  .master-table .nc { font-weight:700; color:#333; width:40px; text-align:center; }
+  .master-table .fc { font-weight:600; color:var(--text-muted); width:50px; text-align:center; }
+
+  .status { text-align:center; padding:1rem; font-size:0.83rem; color:var(--text-muted); }
+  .progress-bar { height:4px; background:var(--border); border-radius:2px; margin:1rem 0; display:none; }
+  .progress-bar.active { display:block; }
+  .progress-fill { height:100%; background:var(--accent); border-radius:2px; width:0%; transition:width 0.3s; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏆 Superball Bingo Generator</h1>
+  <p>Spezialrunden – Aussagen-Bingo auf A5</p>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('input')">① Einstellungen</button>
+    <button class="tab" onclick="switchTab('preview')">② Vorschau & Export</button>
+    <button class="tab" onclick="switchTab('master')">③ Meister-Matrix</button>
+  </div>
+
+  <!-- TAB 1 -->
+  <div id="panel-input" class="panel active">
+    <div class="card">
+      <h2>Spielmodus</h2>
+      <p class="subtitle">Wie sollen die Zettel aufgebaut sein?</p>
+      <div class="mode-selector">
+        <div class="mode-btn active" onclick="setMode('2x5')" id="modeBtn2x5">
+          <strong>2 × 5×5 Felder</strong>
+          <span>48 Aussagen · je 24 pro Feld · Joker in Mitte</span>
+        </div>
+        <div class="mode-btn" onclick="setMode('3x4')" id="modeBtn3x4">
+          <strong>3 × 4×4 Felder</strong>
+          <span>48 Aussagen · je 16 pro Feld · kein Joker</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="title-row">
+        <label>Überschrift:</label>
+        <input type="text" id="bingoTitle" value="Superball | Ich habe noch Niengo">
+      </div>
+
+      <div class="info-box" id="infoText">
+        48 Aussagen eingeben – je 24 pro Spielfeld (A und B). Der Bingo-Meister zieht Zahlen 1–48 und liest die zugeordnete Aussage vor.
+      </div>
+
+      <div id="stmtContainer"></div>
+
+      <div class="controls">
+        <label>Anzahl Zettel:</label>
+        <input type="number" id="numCards" value="75" min="1" max="200">
+        <button class="btn btn-primary" onclick="generateCards()">Zettel generieren</button>
+        <button class="btn btn-outline" onclick="fillExample()">Beispiel laden</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2 -->
+  <div id="panel-preview" class="panel">
+    <div class="card">
+      <div class="preview-controls">
+        <div class="page-nav">
+          <button onclick="prevCard()">‹</button>
+          <span id="pageInfo">–</span>
+          <button onclick="nextCard()">›</button>
+        </div>
+        <button class="btn btn-secondary" onclick="exportPDF()" id="btnExport" disabled>PDF herunterladen</button>
+      </div>
+      <div id="previewArea"><div class="status">Noch keine Zettel generiert.</div></div>
+      <div class="progress-bar" id="progressPdf"><div class="progress-fill" id="progressPdfFill"></div></div>
+    </div>
+  </div>
+
+  <!-- TAB 3 -->
+  <div id="panel-master" class="panel">
+    <div class="card">
+      <h2>Bingo-Meister Zuordnung</h2>
+      <p class="subtitle">Zahl ziehen → Aussage vorlesen.</p>
+      <div id="masterArea"><div class="status">Noch keine Aussagen eingegeben.</div></div>
+      <button class="btn btn-secondary" onclick="exportMasterPDF()" id="btnMasterExport" disabled style="margin-top:1rem;">Matrix als PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   STATE
+   ============================================================ */
+let MODE = '2x5'; // '2x5' or '3x4'
+let cards = [], currentCard = 0;
+
+const MODES = {
+  '2x5': { fields: 2, size: 5, perField: 24, hasJoker: true, total: 48 },
+  '3x4': { fields: 3, size: 4, perField: 16, hasJoker: false, total: 48 },
+};
+
+function m() { return MODES[MODE]; }
+
+/* ============================================================
+   MODE SWITCH
+   ============================================================ */
+function setMode(mode) {
+  MODE = mode;
+  document.getElementById('modeBtn2x5').classList.toggle('active', mode==='2x5');
+  document.getElementById('modeBtn3x4').classList.toggle('active', mode==='3x4');
+  cards = [];
+  currentCard = 0;
+  document.getElementById('btnExport').disabled = true;
+  buildInputs();
+  updateInfoText();
+}
+
+function updateInfoText() {
+  const mc = m();
+  document.getElementById('infoText').textContent =
+    mc.total + ' Aussagen eingeben \u2013 je ' + mc.perField + ' pro Spielfeld (' +
+    'ABCDEFG'.slice(0, mc.fields).split('').join(', ') + '). ' +
+    (mc.hasJoker ? 'Joker in der Mitte.' : 'Kein Joker.') +
+    ' Der Bingo-Meister zieht Zahlen 1\u2013' + mc.total + '.';
+}
+
+/* ============================================================
+   BUILD INPUTS
+   ============================================================ */
+function buildInputs() {
+  const mc = m();
+  const container = document.getElementById('stmtContainer');
+  container.innerHTML = '';
+
+  const wrapper = document.createElement('div');
+  wrapper.className = mc.fields === 2 ? 'columns-2' : 'columns-3';
+
+  const labels = 'ABCDEFG'.split('');
+  for (let f = 0; f < mc.fields; f++) {
+    const col = document.createElement('div');
+    const start = f * mc.perField + 1;
+    const end = start + mc.perField - 1;
+
+    col.innerHTML = '<div class="field-label">Feld ' + labels[f] + ' \u2013 Aussagen ' + start + '\u2013' + end + '</div>';
+    const grid = document.createElement('div');
+    grid.className = 'statements-grid';
+    for (let i = start; i <= end; i++) {
+      grid.innerHTML += '<div class="stmt-row"><span class="stmt-num">' + i + '</span><input type="text" id="s' + i + '" placeholder="Aussage ' + i + '"></div>';
+    }
+    col.appendChild(grid);
+
+    if (mc.hasJoker) {
+      col.innerHTML += '<div class="joker-row"><span class="joker-badge">\u2605 JOKER ' + labels[f] + '</span><input type="text" id="joker' + labels[f] + '" value="JOKER" placeholder="Joker-Text"></div>';
+    }
+    wrapper.appendChild(col);
+  }
+  container.appendChild(wrapper);
+}
+buildInputs();
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function getStatements() {
+  const s = [];
+  for (let i = 1; i <= m().total; i++) s.push(document.getElementById('s' + i).value.trim());
+  return s;
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.textContent.includes(name==='input'?'\u2460':name==='preview'?'\u2461':'\u2462'));
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  if (name==='master') buildMasterTable();
+}
+
+function shuffle(arr) {
+  const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a;
+}
+
+function buildGrid(stmts, jokerText) {
+  const mc = m();
+  const sh = shuffle(stmts);
+  const grid = []; let idx = 0;
+  const mid = Math.floor(mc.size / 2);
+  for (let r = 0; r < mc.size; r++) {
+    const row = [];
+    for (let c = 0; c < mc.size; c++) {
+      if (mc.hasJoker && r === mid && c === mid) row.push(jokerText);
+      else row.push(sh[idx++]);
+    }
+    grid.push(row);
+  }
+  return grid;
+}
+
+/* ============================================================
+   GENERATE
+   ============================================================ */
+function generateCards() {
+  const mc = m();
+  const stmts = getStatements();
+  const empty = stmts.filter(s=>!s).length;
+  if (empty > 0) { alert('Bitte alle ' + mc.total + ' Aussagen ausf\u00fcllen! Es fehlen noch ' + empty + '.'); return; }
+
+  const num = parseInt(document.getElementById('numCards').value) || 75;
+  const labels = 'ABCDEFG'.split('');
+  const fieldStmts = [];
+  for (let f = 0; f < mc.fields; f++) {
+    fieldStmts.push(stmts.slice(f * mc.perField, (f+1) * mc.perField));
+  }
+
+  const jokers = [];
+  if (mc.hasJoker) {
+    for (let f = 0; f < mc.fields; f++) {
+      const el = document.getElementById('joker' + labels[f]);
+      jokers.push(el ? el.value.trim() || 'JOKER' : 'JOKER');
+    }
+  }
+
+  cards = [];
+  const seen = new Set();
+  for (let n = 0; n < num; n++) {
+    let attempts = 0, grids, key;
+    do {
+      grids = [];
+      for (let f = 0; f < mc.fields; f++) {
+        grids.push(buildGrid(fieldStmts[f], jokers[f] || ''));
+      }
+      key = grids.map(g => g.flat().join('|')).join('##');
+      attempts++;
+    } while (seen.has(key) && attempts < 500);
+    seen.add(key);
+    cards.push({ id: n + 1, grids });
+  }
+  currentCard = 0;
+  document.getElementById('btnExport').disabled = false;
+  switchTab('preview');
+  renderPreview();
+}
+
+/* ============================================================
+   PREVIEW
+   ============================================================ */
+function renderPreview() {
+  if (!cards.length) return;
+  const card = cards[currentCard];
+  const title = document.getElementById('bingoTitle').value || 'Superball';
+  const mc = m();
+  const labels = 'ABCDEFG'.split('');
+  document.getElementById('pageInfo').textContent = 'Zettel ' + card.id + ' / ' + cards.length;
+
+  const cellSize = mc.size === 5 ? 48 : 52;
+  let html = '<div class="preview-sheet">';
+  html += '<div class="preview-title">' + title + '</div>';
+  html += '<div class="preview-sub">Zettel #' + card.id + '</div>';
+
+  for (let f = 0; f < mc.fields; f++) {
+    html += '<div style="margin-top:6px;"><div class="preview-sub">\u2014 Feld ' + labels[f] + ' \u2014</div>';
+    html += '<div class="preview-card" style="width:' + (cellSize * mc.size) + 'px;">';
+    html += '<div class="preview-grid" style="grid-template-columns:repeat(' + mc.size + ',1fr);">';
+    const grid = card.grids[f];
+    const mid = Math.floor(mc.size / 2);
+    for (let r = 0; r < mc.size; r++)
+      for (let c = 0; c < mc.size; c++) {
+        const j = mc.hasJoker && r === mid && c === mid;
+        html += '<div class="preview-cell' + (j?' joker':'') + '" style="width:'+cellSize+'px;height:'+cellSize+'px;">' + grid[r][c] + '</div>';
+      }
+    html += '</div></div></div>';
+  }
+  html += '<div class="preview-motto">Freundschaft \u2013 Erst das Vergn\u00fcgen, dann das Vergn\u00fcgen &nbsp;\u00b7&nbsp; \u201eBambi \u2013 Dreh mir die Walze\u201c</div>';
+  html += '</div>';
+  document.getElementById('previewArea').innerHTML = html;
+}
+
+function prevCard(){if(cards.length&&currentCard>0){currentCard--;renderPreview();}}
+function nextCard(){if(cards.length&&currentCard<cards.length-1){currentCard++;renderPreview();}}
+
+/* ============================================================
+   MASTER TABLE
+   ============================================================ */
+function buildMasterTable() {
+  const mc = m();
+  const stmts = getStatements();
+  if (!stmts.some(s=>s)){document.getElementById('masterArea').innerHTML='<div class="status">Noch keine Aussagen.</div>';document.getElementById('btnMasterExport').disabled=true;return;}
+  document.getElementById('btnMasterExport').disabled = false;
+  const labels = 'ABCDEFG'.split('');
+  let rows = '';
+  for (let i = 0; i < mc.total; i++) {
+    const f = Math.floor(i / mc.perField);
+    rows += '<tr><td class="nc">'+(i+1)+'</td><td class="fc">'+labels[f]+'</td><td>'+(stmts[i]||'\u2013')+'</td></tr>';
+  }
+  document.getElementById('masterArea').innerHTML =
+    '<table class="master-table"><thead><tr><th>Zahl</th><th>Feld</th><th>Aussage</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+/* ============================================================
+   PDF EXPORT – jsPDF direct download
+   ============================================================ */
+async function exportPDF() {
+  if (!cards.length) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a5' });
+  const title = document.getElementById('bingoTitle').value || 'Superball';
+  const mc = m();
+  const labels = 'ABCDEFG'.split('');
+
+  // A5 = 148 x 210 mm
+  const pw = 148, ph = 210;
+  const marginX = 8;
+  const headerZone = 22; // title + zettel#
+  const footerZone = 8;  // mottos
+  const fieldGap = mc.fields === 2 ? 5 : 3;
+  const labelH = 4;
+  const availableH = ph - headerZone - footerZone;
+  const totalGaps = (mc.fields - 1) * fieldGap + mc.fields * labelH;
+  const maxGridH = (availableH - totalGaps) / mc.fields;
+  const maxGridW = pw - marginX * 2;
+
+  // square cells: pick the smaller constraint
+  const cellFromH = maxGridH / mc.size;
+  const cellFromW = maxGridW / mc.size;
+  const cellSize = Math.min(cellFromH, cellFromW);
+  const gridW = cellSize * mc.size;
+  const gridH = cellSize * mc.size;
+
+  const bar = document.getElementById('progressPdf');
+  const fill = document.getElementById('progressPdfFill');
+  bar.classList.add('active');
+
+  for (let i = 0; i < cards.length; i++) {
+    if (i > 0) doc.addPage();
+    const card = cards[i];
+
+    // Title
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(18);
+    doc.setTextColor(20,20,20);
+    doc.text(title, pw/2, 14, {align:'center'});
+
+    // Zettel #
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(7);
+    doc.setTextColor(150,150,150);
+    doc.text('Zettel #' + card.id, pw/2, 19, {align:'center'});
+
+    // Calculate vertical layout to center grids
+    const totalContentH = mc.fields * (labelH + gridH) + (mc.fields - 1) * fieldGap;
+    let startY = headerZone + (availableH - totalContentH) / 2;
+
+    for (let f = 0; f < mc.fields; f++) {
+      const gx = (pw - gridW) / 2;
+      const gy = startY + f * (labelH + gridH + fieldGap);
+
+      // Field label
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(6.5);
+      doc.setTextColor(150,150,150);
+      doc.text('\u2014  Feld ' + labels[f] + '  \u2014', pw/2, gy + 2.5, {align:'center'});
+
+      const tableY = gy + labelH;
+      drawGridPDF(doc, card.grids[f], gx, tableY, gridW, cellSize, mc);
+    }
+
+    // Mottos at bottom
+    doc.setFont('helvetica','italic');
+    doc.setFontSize(4.5);
+    doc.setTextColor(180,180,180);
+    doc.text('Freundschaft \u2013 Erst das Vergn\u00fcgen, dann das Vergn\u00fcgen', 5, ph - 4);
+    doc.text('\u201eBambi \u2013 Dreh mir die Walze\u201c', pw - 5, ph - 4, {align:'right'});
+
+    fill.style.width = ((i+1)/cards.length*100)+'%';
+    if (i % 15 === 0) await new Promise(r=>setTimeout(r,5));
+  }
+
+  doc.save('superball-bingo.pdf');
+  bar.classList.remove('active');
+  fill.style.width = '0%';
+}
+
+function drawGridPDF(doc, grid, x, y, w, cellSize, mc) {
+  const sz = mc.size;
+  const mid = Math.floor(sz/2);
+
+  // Outer border
+  doc.setDrawColor(40,40,40);
+  doc.setLineWidth(0.5);
+  doc.rect(x, y, w, cellSize * sz);
+
+  // Inner lines
+  doc.setDrawColor(160,160,160);
+  doc.setLineWidth(0.2);
+  for (let r = 1; r < sz; r++) doc.line(x, y + r*cellSize, x+w, y + r*cellSize);
+  for (let c = 1; c < sz; c++) doc.line(x + c*cellSize, y, x + c*cellSize, y + cellSize*sz);
+
+  // Cell content
+  for (let r = 0; r < sz; r++) {
+    for (let c = 0; c < sz; c++) {
+      const cx = x + c*cellSize;
+      const cy = y + r*cellSize;
+      const isJ = mc.hasJoker && r===mid && c===mid;
+
+      if (isJ) {
+        doc.setFillColor(230,230,230);
+        doc.rect(cx+0.1, cy+0.1, cellSize-0.2, cellSize-0.2, 'F');
+        doc.setTextColor(60,60,60);
+        doc.setFont('helvetica','bold');
+      } else {
+        doc.setTextColor(30,30,30);
+        doc.setFont('helvetica','normal');
+      }
+
+      const txt = grid[r][c];
+      const maxW = cellSize - 2.5;
+      const fs = fitFS(doc, txt, maxW, cellSize - 2.5, sz===5 ? 7 : 7.5, 4.5);
+      doc.setFontSize(fs);
+      const lines = doc.splitTextToSize(txt, maxW);
+      const lh = fs * 0.38;
+      const tH = lines.length * lh;
+      const ty = cy + (cellSize - tH)/2 + lh*0.75;
+      for (let l = 0; l < lines.length; l++) {
+        doc.text(lines[l], cx + cellSize/2, ty + l*lh, {align:'center'});
+      }
+    }
+  }
+}
+
+function fitFS(doc,text,maxW,maxH,start,min) {
+  for(let s=start;s>=min;s-=0.5){doc.setFontSize(s);const lines=doc.splitTextToSize(text,maxW);if(lines.length*s*0.38<=maxH)return s;}return min;
+}
+
+/* ============================================================
+   MASTER PDF
+   ============================================================ */
+function exportMasterPDF() {
+  const mc = m();
+  const stmts = getStatements();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const title = document.getElementById('bingoTitle').value || 'Superball';
+  const labels = 'ABCDEFG'.split('');
+
+  doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(30,30,30);
+  doc.text(title+' \u2013 Meister-Matrix',105,18,{align:'center'});
+  doc.setFontSize(8);doc.setTextColor(120,120,120);doc.setFont('helvetica','normal');
+  doc.text('Zahl ziehen \u2192 Aussage vorlesen \u2192 Spieler kreuzen an',105,24,{align:'center'});
+
+  let y=30;const rh=6;
+  doc.setFillColor(30,30,30);doc.rect(10,y,190,7,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(8);
+  doc.text('Zahl',20,y+4.5,{align:'center'});doc.text('Feld',35,y+4.5,{align:'center'});doc.text('Aussage',42,y+4.5);
+  y+=7;
+
+  doc.setFontSize(7.5);
+  for(let i=0;i<mc.total;i++){
+    if(y>280){doc.addPage();y=15;}
+    if(i%2===0){doc.setFillColor(248,248,245);doc.rect(10,y,190,rh,'F');}
+    const f=Math.floor(i/mc.perField);
+    doc.setTextColor(50,50,50);doc.setFont('helvetica','bold');
+    doc.text(String(i+1),20,y+4,{align:'center'});
+    doc.setTextColor(140,140,140);
+    doc.text(labels[f],35,y+4,{align:'center'});
+    doc.setTextColor(30,30,30);doc.setFont('helvetica','normal');
+    doc.text(stmts[i]||'\u2013',42,y+4);
+    y+=rh;
+  }
+  doc.save('superball-meister-matrix.pdf');
+}
+
+/* ============================================================
+   EXAMPLE DATA
+   ============================================================ */
+function fillExample() {
+  const mc = m();
+  const ex = [
+    "Hat Haustiere","War schon in Asien","Spielt Instrument","Trinkt keinen Kaffee",
+    "Hat 3+ Geschwister","Ist Linksh\u00e4nder","War im Urlaub","Mag keine Schokolade",
+    "Kann Rad fahren","Hat blaue Augen","Spricht 3+ Sprachen","Kam mit dem Bus",
+    "Hat einen Garten","Kann gut kochen","War auf Festival","Tr\u00e4gt heute Rot",
+    "Hat einen Hund","Ist Fr\u00fchaufsteher","Mag Sushi","Hat ein Tattoo",
+    "Kann schwimmen","Liest gerne","War im Stadion","Liebt Pizza",
+    "Kann tanzen","Hat H\u00f6henangst","Trinkt gerne Tee","War in Amerika",
+    "Sammelt etwas","Mag Horrorfilme","Kann pfeifen","Hat Sommersprossen",
+    "Spielt Videospiele","War schon zelten","Hat lockige Haare","Mag Regen",
+    "Kann Skateboard","Ist Vegetarier","Hat ein Ehrenamt","Steht gern fr\u00fch auf",
+    "Mag Museen","Hat schon gewonnen","Kann jonglieren","Trinkt Sprudel",
+    "Mag Winter mehr","Tr\u00e4gt eine Brille","Kann gut zeichnen","Mag Karaoke"
+  ];
+  for (let i = 0; i < mc.total; i++) {
+    const el = document.getElementById('s'+(i+1));
+    if(el) el.value = ex[i] || 'Aussage '+(i+1);
+  }
+  const labels = 'ABCDEFG'.split('');
+  if (mc.hasJoker) {
+    for (let f = 0; f < mc.fields; f++) {
+      const el = document.getElementById('joker'+labels[f]);
+      if(el) el.value = '\u2605 JOKER \u2605';
+    }
+  }
+  document.getElementById('bingoTitle').value = 'Superball | Ich habe noch Niengo';
+}
+</script>
+</body>
+</html>
